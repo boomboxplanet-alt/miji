@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>基本測試頁面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        button {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .info { background: rgba(33, 150, 243, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🎯 GitHub Pages 基本測試</h1>
+            <p>如果您能看到這個頁面，說明 GitHub Pages 部署正常！</p>
+            
+            <div id="test-results"></div>
+            
+            <button onclick="runTests()">🔄 執行測試</button>
+            <button onclick="location.href='index.html'">📱 主應用程式</button>
+            <button onclick="location.href='simple.html'">🔧 簡化測試</button>
+            <button onclick="location.href='debug.html'">🔍 完整診斷</button>
+        </div>
+        
+        <div class="card">
+            <h2>📊 系統信息</h2>
+            <div id="system-info"></div>
+        </div>
+        
+        <div class="card">
+            <h2>🌐 當前狀態</h2>
+            <div class="status info">
+                <strong>網址：</strong> <span id="current-url"></span><br>
+                <strong>時間：</strong> <span id="current-time"></span><br>
+                <strong>用戶代理：</strong> <span id="user-agent"></span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 顯示基本信息
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('current-time').textContent = new Date().toLocaleString();
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+        
+        // 系統信息
+        const systemInfo = document.getElementById('system-info');
+        systemInfo.innerHTML = `
+            <div class="status info">
+                <strong>瀏覽器：</strong> ${getBrowserName()}<br>
+                <strong>平台：</strong> ${navigator.platform}<br>
+                <strong>語言：</strong> ${navigator.language}<br>
+                <strong>Cookie：</strong> ${navigator.cookieEnabled ? '啟用' : '禁用'}<br>
+                <strong>JavaScript：</strong> 啟用 ✅<br>
+                <strong>本地存儲：</strong> ${typeof(Storage) !== 'undefined' ? '支援' : '不支援'}
+            </div>
+        `;
+        
+        function getBrowserName() {
+            const userAgent = navigator.userAgent;
+            if (userAgent.includes('Chrome')) return 'Chrome';
+            if (userAgent.includes('Firefox')) return 'Firefox';
+            if (userAgent.includes('Safari')) return 'Safari';
+            if (userAgent.includes('Edge')) return 'Edge';
+            return '未知瀏覽器';
+        }
+        
+        function runTests() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<div class="status info">正在執行測試...</div>';
+            
+            const tests = [
+                testBasicFunctionality,
+                testFileAccess,
+                testNetworkConnectivity,
+                testFlutterFiles
+            ];
+            
+            let testResults = [];
+            let completedTests = 0;
+            
+            tests.forEach((test, index) => {
+                setTimeout(() => {
+                    test().then(result => {
+                        testResults[index] = result;
+                        completedTests++;
+                        
+                        if (completedTests === tests.length) {
+                            displayResults(testResults);
+                        }
+                    }).catch(error => {
+                        testResults[index] = {
+                            name: test.name,
+                            status: 'error',
+                            message: error.message
+                        };
+                        completedTests++;
+                        
+                        if (completedTests === tests.length) {
+                            displayResults(testResults);
+                        }
+                    });
+                }, index * 500);
+            });
+        }
+        
+        async function testBasicFunctionality() {
+            return {
+                name: '基本功能測試',
+                status: 'success',
+                message: 'HTML、CSS、JavaScript 正常運行'
+            };
+        }
+        
+        async function testFileAccess() {
+            try {
+                const response = await fetch('manifest.json');
+                if (response.ok) {
+                    return {
+                        name: '文件訪問測試',
+                        status: 'success',
+                        message: 'manifest.json 載入成功'
+                    };
+                } else {
+                    return {
+                        name: '文件訪問測試',
+                        status: 'error',
+                        message: `manifest.json 載入失敗 (${response.status})`
+                    };
+                }
+            } catch (error) {
+                return {
+                    name: '文件訪問測試',
+                    status: 'error',
+                    message: `文件訪問錯誤: ${error.message}`
+                };
+            }
+        }
+        
+        async function testNetworkConnectivity() {
+            try {
+                const response = await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors' });
+                return {
+                    name: '網路連接測試',
+                    status: 'success',
+                    message: '網路連接正常'
+                };
+            } catch (error) {
+                return {
+                    name: '網路連接測試',
+                    status: 'error',
+                    message: `網路連接失敗: ${error.message}`
+                };
+            }
+        }
+        
+        async function testFlutterFiles() {
+            const flutterFiles = ['flutter.js', 'flutter_bootstrap.js', 'main.dart.js'];
+            const results = [];
+            
+            for (const file of flutterFiles) {
+                try {
+                    const response = await fetch(file, { method: 'HEAD' });
+                    results.push(`${file}: ${response.ok ? '✅' : '❌'}`);
+                } catch (error) {
+                    results.push(`${file}: ❌`);
+                }
+            }
+            
+            const allOk = results.every(r => r.includes('✅'));
+            return {
+                name: 'Flutter 文件測試',
+                status: allOk ? 'success' : 'error',
+                message: results.join('<br>')
+            };
+        }
+        
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('test-results');
+            let html = '<h3>測試結果：</h3>';
+            
+            results.forEach(result => {
+                const statusClass = result.status === 'success' ? 'success' : 'error';
+                html += `
+                    <div class="status ${statusClass}">
+                        <strong>${result.name}:</strong> ${result.message}
+                    </div>
+                `;
+            });
+            
+            const allPassed = results.every(r => r.status === 'success');
+            if (allPassed) {
+                html += `
+                    <div class="status success">
+                        <strong>🎉 所有測試通過！</strong><br>
+                        GitHub Pages 部署正常，可以嘗試載入 Flutter 應用程式。
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="status error">
+                        <strong>⚠️ 發現問題</strong><br>
+                        請檢查失敗的測試項目，可能需要重新部署。
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        // 頁面載入時自動執行測試
+        window.onload = function() {
+            setTimeout(runTests, 1000);
+        };
+    </script>
+</body>
+</html>
