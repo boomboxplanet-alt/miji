@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>秘跡 - 診斷頁面</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .status-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .success { background: #4CAF50; }
+        .error { background: #f44336; }
+        .warning { background: #ff9800; }
+        button {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .log {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 秘跡應用程式診斷中心</h1>
+        
+        <div class="card">
+            <h2>📊 系統檢查</h2>
+            <div id="system-status"></div>
+        </div>
+        
+        <div class="card">
+            <h2>📁 文件檢查</h2>
+            <div id="file-status"></div>
+            <button onclick="checkFiles()">🔄 重新檢查文件</button>
+        </div>
+        
+        <div class="card">
+            <h2>🌐 網路連接</h2>
+            <div id="network-status"></div>
+            <button onclick="checkNetwork()">🔄 測試網路</button>
+        </div>
+        
+        <div class="card">
+            <h2>🗺️ Google Maps API</h2>
+            <div id="maps-status"></div>
+            <button onclick="testGoogleMaps()">🔄 測試地圖 API</button>
+        </div>
+        
+        <div class="card">
+            <h2>🚀 Flutter 應用程式</h2>
+            <div id="flutter-status"></div>
+            <button onclick="testFlutter()">🔄 測試 Flutter</button>
+            <button onclick="loadMainApp()">📱 載入主應用程式</button>
+        </div>
+        
+        <div class="card">
+            <h2>📝 診斷日誌</h2>
+            <div class="log" id="diagnostic-log"></div>
+            <button onclick="clearLog()">🗑️ 清除日誌</button>
+            <button onclick="downloadLog()">💾 下載日誌</button>
+        </div>
+    </div>
+    
+    <script>
+        let diagnosticLog = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            diagnosticLog.push(logEntry);
+            
+            const logElement = document.getElementById('diagnostic-log');
+            logElement.innerHTML = diagnosticLog.slice(-20).join('\n');
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(logEntry);
+        }
+        
+        function createStatus(text, type) {
+            return `
+                <div class="status">
+                    <div class="status-icon ${type}"></div>
+                    <span>${text}</span>
+                </div>
+            `;
+        }
+        
+        function checkSystemInfo() {
+            const systemStatus = document.getElementById('system-status');
+            let html = '';
+            
+            // 瀏覽器信息
+            html += createStatus(`瀏覽器: ${navigator.userAgent}`, 'success');
+            html += createStatus(`語言: ${navigator.language}`, 'success');
+            html += createStatus(`平台: ${navigator.platform}`, 'success');
+            html += createStatus(`Cookie 啟用: ${navigator.cookieEnabled ? '是' : '否'}`, navigator.cookieEnabled ? 'success' : 'error');
+            html += createStatus(`Service Worker 支援: ${'serviceWorker' in navigator ? '是' : '否'}`, 'serviceWorker' in navigator ? 'success' : 'warning');
+            html += createStatus(`當前網址: ${window.location.href}`, 'success');
+            
+            systemStatus.innerHTML = html;
+            log('系統信息檢查完成');
+        }
+        
+        function checkFiles() {
+            const fileStatus = document.getElementById('file-status');
+            const requiredFiles = [
+                'flutter.js',
+                'flutter_bootstrap.js', 
+                'main.dart.js',
+                'manifest.json',
+                'favicon.png'
+            ];
+            
+            let html = '';
+            let allFilesOk = true;
+            
+            requiredFiles.forEach(file => {
+                fetch(file, { method: 'HEAD' })
+                    .then(response => {
+                        if (response.ok) {
+                            html += createStatus(`${file} - 載入成功 (${response.status})`, 'success');
+                            log(`文件檢查: ${file} - 成功`);
+                        } else {
+                            html += createStatus(`${file} - 載入失敗 (${response.status})`, 'error');
+                            log(`文件檢查: ${file} - 失敗 (${response.status})`, 'error');
+                            allFilesOk = false;
+                        }
+                        fileStatus.innerHTML = html;
+                    })
+                    .catch(error => {
+                        html += createStatus(`${file} - 載入錯誤: ${error.message}`, 'error');
+                        log(`文件檢查: ${file} - 錯誤: ${error.message}`, 'error');
+                        allFilesOk = false;
+                        fileStatus.innerHTML = html;
+                    });
+            });
+        }
+        
+        function checkNetwork() {
+            const networkStatus = document.getElementById('network-status');
+            
+            fetch('https://www.google.com/favicon.ico', { mode: 'no-cors' })
+                .then(() => {
+                    networkStatus.innerHTML = createStatus('網路連接正常', 'success');
+                    log('網路連接測試: 成功');
+                })
+                .catch(error => {
+                    networkStatus.innerHTML = createStatus(`網路連接異常: ${error.message}`, 'error');
+                    log(`網路連接測試: 失敗 - ${error.message}`, 'error');
+                });
+        }
+        
+        function testGoogleMaps() {
+            const mapsStatus = document.getElementById('maps-status');
+            
+            if (typeof google !== 'undefined' && google.maps) {
+                mapsStatus.innerHTML = createStatus('Google Maps API 已載入', 'success');
+                log('Google Maps API: 已載入');
+            } else {
+                mapsStatus.innerHTML = createStatus('Google Maps API 未載入', 'warning');
+                log('Google Maps API: 未載入', 'warning');
+            }
+        }
+        
+        function testFlutter() {
+            const flutterStatus = document.getElementById('flutter-status');
+            let html = '';
+            
+            // 檢查 Flutter 相關對象
+            if (typeof _flutter !== 'undefined') {
+                html += createStatus('Flutter 引擎已載入', 'success');
+                log('Flutter 引擎: 已載入');
+            } else {
+                html += createStatus('Flutter 引擎未載入', 'warning');
+                log('Flutter 引擎: 未載入', 'warning');
+            }
+            
+            // 檢查 main.dart.js
+            if (document.querySelector('script[src*="main.dart.js"]')) {
+                html += createStatus('main.dart.js 腳本已載入', 'success');
+                log('main.dart.js: 已載入');
+            } else {
+                html += createStatus('main.dart.js 腳本未載入', 'error');
+                log('main.dart.js: 未載入', 'error');
+            }
+            
+            flutterStatus.innerHTML = html;
+        }
+        
+        function loadMainApp() {
+            log('嘗試載入主應用程式...');
+            window.location.href = './index.html';
+        }
+        
+        function clearLog() {
+            diagnosticLog = [];
+            document.getElementById('diagnostic-log').innerHTML = '';
+        }
+        
+        function downloadLog() {
+            const logContent = diagnosticLog.join('\n');
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `miji-diagnostic-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.log`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // 頁面載入時自動執行檢查
+        window.onload = function() {
+            log('診斷頁面載入完成');
+            checkSystemInfo();
+            checkFiles();
+            checkNetwork();
+            testGoogleMaps();
+            testFlutter();
+        };
+        
+        // 錯誤處理
+        window.onerror = function(message, source, lineno, colno, error) {
+            log(`JavaScript 錯誤: ${message} (${source}:${lineno}:${colno})`, 'error');
+        };
+        
+        window.addEventListener('unhandledrejection', function(event) {
+            log(`未處理的 Promise 拒絕: ${event.reason}`, 'error');
+        });
+    </script>
+</body>
+</html>
