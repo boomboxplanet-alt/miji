@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="./">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="秘跡 - 限時限地的隱密訊息應用">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="秘跡 Miji">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>秘跡 Miji</title>
+  <link rel="manifest" href="manifest.json">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      margin-top: 20px;
+      font-size: 18px;
+      text-align: center;
+    }
+    
+    .error {
+      background: #f44336;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">正在載入秘跡應用程式...</div>
+    <div id="status" style="margin-top: 10px; font-size: 14px; opacity: 0.8;"></div>
+  </div>
+  
+  <script>
+    let loadingStatus = document.getElementById('status');
+    let startTime = Date.now();
+    
+    function updateStatus(message) {
+      loadingStatus.textContent = message;
+      console.log('[Miji]', message);
+    }
+    
+    function showError(message) {
+      document.getElementById('loading').innerHTML = `
+        <div class="error">
+          <h2>❌ 載入失敗</h2>
+          <p>${message}</p>
+          <button onclick="location.reload()" style="padding: 10px 20px; margin: 10px; background: #fff; color: #f44336; border: none; border-radius: 4px; cursor: pointer;">重新載入</button>
+          <button onclick="location.href='debug.html'" style="padding: 10px 20px; margin: 10px; background: #2196F3; color: #fff; border: none; border-radius: 4px; cursor: pointer;">診斷頁面</button>
+        </div>
+      `;
+    }
+    
+    // 檢查必要文件
+    updateStatus('檢查必要文件...');
+    
+    Promise.all([
+      fetch('flutter.js').then(r => r.ok ? 'flutter.js ✓' : 'flutter.js ✗'),
+      fetch('flutter_bootstrap.js').then(r => r.ok ? 'flutter_bootstrap.js ✓' : 'flutter_bootstrap.js ✗'),
+      fetch('main.dart.js').then(r => r.ok ? 'main.dart.js ✓' : 'main.dart.js ✗')
+    ]).then(results => {
+      updateStatus(results.join(' | '));
+      
+      if (results.some(r => r.includes('✗'))) {
+        showError('缺少必要的 Flutter 文件。請檢查部署是否完整。');
+        return;
+      }
+      
+      // 載入 Flutter
+      updateStatus('載入 Flutter 引擎...');
+      loadFlutter();
+    }).catch(error => {
+      showError(`文件檢查失敗: ${error.message}`);
+    });
+    
+    function loadFlutter() {
+      // 設置超時
+      setTimeout(() => {
+        if (document.getElementById('loading').style.display !== 'none') {
+          showError('Flutter 應用程式載入超時。可能是網路問題或應用程式錯誤。');
+        }
+      }, 30000); // 30秒超時
+      
+      // 載入 Flutter bootstrap
+      const script = document.createElement('script');
+      script.src = 'flutter_bootstrap.js';
+      script.async = true;
+      
+      script.onload = () => {
+        updateStatus('Flutter 引擎已載入，正在初始化...');
+      };
+      
+      script.onerror = () => {
+        showError('Flutter bootstrap 載入失敗。');
+      };
+      
+      document.head.appendChild(script);
+    }
+    
+    // 監聽 Flutter 載入事件
+    window.addEventListener('flutter-first-frame', () => {
+      updateStatus('應用程式已載入！');
+      setTimeout(() => {
+        document.getElementById('loading').style.display = 'none';
+      }, 500);
+    });
+    
+    // 錯誤處理
+    window.addEventListener('error', (event) => {
+      console.error('JavaScript Error:', event.error);
+      if (event.error && event.error.message) {
+        showError(`JavaScript 錯誤: ${event.error.message}`);
+      }
+    });
+    
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Unhandled Promise Rejection:', event.reason);
+      showError(`Promise 錯誤: ${event.reason}`);
+    });
+  </script>
+</body>
+</html>
