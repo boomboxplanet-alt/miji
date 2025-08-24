@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>秘跡 - 登入註冊</title>
     <link rel="icon" type="image/png" href="favicon.png"/>
+    
+    <!-- Google Sign-In SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * {
             margin: 0;
@@ -531,11 +534,75 @@
             }
         }
         
-        // 初始化 Google Sign-In（如果有真實的 Google Client ID）
+        // 初始化 Google Sign-In
         function initGoogleSignIn() {
-            // 這裡可以初始化真正的 Google Sign-In
-            // 需要在 Google Cloud Console 設置 OAuth 2.0 客戶端 ID
-            console.log('Google Sign-In initialized (mock mode)');
+            // 使用真實的 Google Client ID
+            const GOOGLE_CLIENT_ID = '489229401965-9imk2ahinf9uicbo8rn21kl0ibi92lie.apps.googleusercontent.com';
+            
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleCredentialResponse
+                });
+                
+                // 渲染 Google 登入按鈕
+                const googleButton = document.querySelector('.google-button');
+                if (googleButton) {
+                    googleButton.style.display = 'none'; // 隱藏原按鈕
+                    
+                    // 創建新的 Google 按鈕容器
+                    const googleContainer = document.createElement('div');
+                    googleContainer.id = 'google-signin-button';
+                    googleButton.parentNode.insertBefore(googleContainer, googleButton);
+                    
+                    google.accounts.id.renderButton(
+                        googleContainer,
+                        {
+                            theme: 'outline',
+                            size: 'large',
+                            width: '100%',
+                            text: 'signin_with',
+                            shape: 'rectangular'
+                        }
+                    );
+                }
+                
+                console.log('Google Sign-In initialized with real Client ID');
+            } else {
+                console.log('Google Sign-In API not loaded, falling back to mock mode');
+            }
+        }
+        
+        // 處理 Google 登入回調
+        async function handleGoogleCredentialResponse(response) {
+            try {
+                showLoading();
+                
+                const apiResponse = await apiRequest('/api/auth/google', {
+                    method: 'POST',
+                    body: {
+                        credential: response.credential
+                    }
+                });
+                
+                if (apiResponse.success) {
+                    // 保存 token
+                    localStorage.setItem('authToken', apiResponse.data.token);
+                    localStorage.setItem('refreshToken', apiResponse.data.refreshToken);
+                    localStorage.setItem('currentUser', JSON.stringify(apiResponse.data.user));
+                    
+                    showNotification('Google 登入成功！正在跳轉...');
+                    
+                    // 跳轉到應用
+                    setTimeout(() => {
+                        window.location.href = 'app.html';
+                    }, 1500);
+                }
+            } catch (error) {
+                showNotification('Google 登入失敗: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
         }
         
         // 檢查是否已登入
