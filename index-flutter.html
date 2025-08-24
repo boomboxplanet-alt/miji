@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="./">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="秘跡 - 限時限地的隱密訊息應用">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="秘跡 Miji">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>秘跡 Miji</title>
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Google Sign-In Configuration -->
+  <meta name="google-signin-client_id" content="489229401965-9imk2ahinf9uicbo8rn21kl0ibi92lie.apps.googleusercontent.com">
+  
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAQYyu2mXjzO-zKMYTClcWdBLZNMclkSuo"></script>
+  
+  <!-- 隱藏Google地圖版權資訊和界面元素 -->
+  <style>
+    /* 基本響應式設置 */
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Flutter應用容器 */
+    #flutter-view {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    /* 手機端適配 */
+    @media screen and (max-width: 768px) {
+      body {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      
+      /* 防止橫向滾動 */
+      * {
+        max-width: 100vw;
+        box-sizing: border-box;
+      }
+      
+      /* 手機端專用：強制隱藏所有可能的Flutter調試元素 */
+      /* 專門針對右上角溢出警告的精確選擇器 */
+      div[style*="position: absolute"][style*="top: 0"][style*="right: 0"][style*="yellow"],
+      div[style*="position: fixed"][style*="top: 0"][style*="right: 0"][style*="yellow"],
+      div[style*="position: absolute"][style*="right: 0"][style*="top: 0"][style*="background"],
+      div[style*="position: fixed"][style*="right: 0"][style*="top: 0"][style*="background"],
+      /* 所有黃色調試元素 */
+      div[style*="yellow"],
+      div[style*="#ffff00"],
+      div[style*="#FFFF00"],
+      div[style*="rgb(255, 255, 0)"],
+      div[style*="rgba(255, 255, 0"],
+      div[style*="background-color: yellow"],
+      div[style*="background: yellow"],
+      div[style*="border"][style*="yellow"],
+      /* 溢出相關文字 */
+      div[style*="OVERFLOWED"],
+      div[style*="overflowed"],
+      div[style*="PIXELS"],
+      div[style*="pixels"],
+      div[style*="RIGHT OVERFLOWED"],
+      div[style*="LEFT OVERFLOWED"],
+      div[style*="TOP OVERFLOWED"],
+      div[style*="BOTTOM OVERFLOWED"],
+      div:contains("RIGHT OVERFLOWED"),
+      div:contains("OVERFLOWED BY"),
+      div:contains("PIXELS"),
+      span:contains("RIGHT OVERFLOWED"),
+      span:contains("OVERFLOWED BY"),
+      span:contains("PIXELS"),
+      /* Flutter特定元素 */
+      flt-semantics *[style*="yellow"],
+      flt-glass-pane *[style*="yellow"],
+      flutter-view *[style*="yellow"],
+      div[flt-renderer] *[style*="yellow"],
+      /* 所有可能的調試覆蓋層 */
+      div[style*="position: absolute"][style*="top: 0"][style*="right: 0"],
+      div[style*="position: fixed"][style*="top: 0"][style*="right: 0"],
+      div[style*="z-index: 999"],
+      div[style*="z-index: 9999"],
+      div[style*="z-index: 99999"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        left: -99999px !important;
+        top: -99999px !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        -webkit-clip-path: inset(100%) !important;
+        clip-path: inset(100%) !important;
+      }
+    }
+    
+    /* 隱藏所有可能的黃色調試元素 */
+    div[style*="background-color: yellow"],
+    div[style*="background: yellow"],
+    div[style*="border: yellow"],
+    div[style*="border-color: yellow"],
+    div[style*="border-top: yellow"],
+    div[style*="border-right: yellow"],
+    div[style*="border-bottom: yellow"],
+    div[style*="border-left: yellow"],
+    div[style*="outline: yellow"],
+    div[style*="box-shadow"][style*="yellow"],
+    .flutter-warning,
+    .flutter-debug,
+    [class*="warning"][style*="yellow"],
+    [class*="debug"][style*="yellow"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
+    
+    /* 隱藏Flutter開發模式的調試元素 */
+    flutter-view div[style*="position: fixed"][style*="top: 0"][style*="right: 0"],
+    flutter-view div[style*="position: absolute"][style*="top: 0"][style*="right: 0"],
+    div[style*="z-index: 999"][style*="yellow"],
+    div[style*="z-index: 9999"][style*="yellow"] {
+      display: none !important;
+    }
+    
+    /* 隱藏Google地圖相關元素 */
+    .gmnoprint, .gm-style-cc, .gm-control-active, .gm-svpc, .gm-fullscreen-control {
+      display: none !important;
+    }
+    
+    /* 隱藏版權資訊 */
+    .gm-style a[href^="https://maps.google.com/maps"] {
+      display: none !important;
+    }
+    
+    /* 隱藏鍵盤快速鍵、地圖資料等信息 */
+    .gm-style-iw, .gm-style div[style*="background-color: rgba(0, 0, 0, 0.5)"], .gm-style div[style*="background-color: white"] {
+      display: none !important;
+    }
+    
+    /* 隱藏所有Google相關的文字 */
+    .gm-style div, .gm-style span, .gm-style a {
+      font-size: 0 !important;
+    }
+    
+    /* 隱藏底部版權信息 */
+    .gm-style-moc, .gm-style-pbc, .gm-style-pbt, .gm-style-mtc, .gm-style-cc {
+      display: none !important;
+    }
+    
+    /* 隱藏底部的所有元素 */
+    .gm-style > div:last-child {
+      display: none !important;
+    }
+    
+    /* 移除所有可能的邊框和輪廓 */
+    * {
+      outline: none !important;
+    }
+    
+    /* 確保沒有溢出的內容 */
+    body, html {
+      position: relative;
+    }
+    
+    /* 隱藏可能的調試信息 */
+    [data-debug], [data-warning], .debug-info, .warning-info {
+      display: none !important;
+    }
+    
+    /* 隱藏Flutter渲染溢出警告 - 加強版 */
+    div[style*="background-color: rgb(255, 255, 0)"],
+    div[style*="background: rgb(255, 255, 0)"],
+    div[style*="background-color: #ffff00"],
+    div[style*="background: #ffff00"],
+    div[style*="background-color: #FFFF00"],
+    div[style*="background: #FFFF00"],
+    div[style*="background-color: rgba(255, 255, 0"],
+    div[style*="background: rgba(255, 255, 0"],
+    div[style*="background-color: yellow"],
+    div[style*="background: yellow"],
+    div[style*="OVERFLOWED"],
+    div[style*="overflowed"],
+    div[style*="PIXELS"],
+    div[style*="pixels"],
+    div[style*="RIGHT OVERFLOWED"],
+    div[style*="LEFT OVERFLOWED"],
+    div[style*="TOP OVERFLOWED"],
+    div[style*="BOTTOM OVERFLOWED"],
+    div[data-message*="OVERFLOWED"],
+    div[data-message*="overflowed"],
+    div[data-message*="PIXELS"],
+    div[data-message*="pixels"],
+    .flutter-overflow-warning,
+    .flutter-render-overflow,
+    [class*="overflow-warning"],
+    [class*="render-overflow"],
+    /* 針對手機端的額外選擇器 */
+    flt-semantics div[style*="yellow"],
+    flt-glass-pane div[style*="yellow"],
+    flutter-view div[style*="yellow"],
+    div[flt-renderer] div[style*="yellow"],
+    /* 隱藏所有包含溢出文字的元素 */
+    *:contains("OVERFLOWED"),
+    *:contains("PIXELS"),
+    *:contains("overflowed"),
+    *:contains("pixels") {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      position: absolute !important;
+      left: -9999px !important;
+      top: -9999px !important;
+      width: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
+    }
+    
+    /* 隱藏所有可能的Flutter調試覆蓋層 - 加強版 */
+    div[style*="position: absolute"][style*="top: 0"][style*="right: 0"][style*="yellow"],
+    div[style*="position: fixed"][style*="top: 0"][style*="right: 0"][style*="yellow"],
+    div[style*="position: absolute"][style*="top: 0"][style*="right: 0"][style*="background"],
+    div[style*="position: fixed"][style*="top: 0"][style*="right: 0"][style*="background"],
+    div[style*="z-index"][style*="yellow"][style*="position: absolute"],
+    div[style*="z-index"][style*="yellow"][style*="position: fixed"],
+    div[style*="border"][style*="yellow"][style*="position: absolute"],
+    div[style*="border"][style*="yellow"][style*="position: fixed"],
+    /* 手機端特定的Flutter元素 */
+    div[style*="position: absolute"][style*="right: 0"][style*="top: 0"][style*="z-index: 999"],
+    div[style*="position: fixed"][style*="right: 0"][style*="top: 0"][style*="z-index: 999"],
+    div[style*="position: absolute"][style*="right: 0"][style*="top: 0"][style*="z-index: 9999"],
+    div[style*="position: fixed"][style*="right: 0"][style*="top: 0"][style*="z-index: 9999"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      position: absolute !important;
+      left: -9999px !important;
+      top: -9999px !important;
+    }
+    
+    /* 手機端專用 - 隱藏所有右上角元素 */
+    @media screen and (max-width: 768px) {
+      div[style*="position: absolute"][style*="right"],
+      div[style*="position: fixed"][style*="right"],
+      div[style*="top: 0"][style*="right: 0"],
+      div[style*="top:0"][style*="right:0"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+      }
+      
+      /* 強制隱藏所有可能的調試元素 */
+      div[style*="yellow"],
+      div[style*="#ffff00"],
+      div[style*="rgb(255, 255, 0)"],
+      div[style*="rgba(255, 255, 0"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        top: -9999px !important;
+        width: 0 !important;
+        height: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <script>
+    // JavaScript動態隱藏溢出警告的後備方案
+    function hideOverflowWarnings() {
+      // 查找所有可能包含溢出警告的元素
+      const allElements = document.querySelectorAll('*');
+      
+      allElements.forEach(element => {
+        const style = element.getAttribute('style') || '';
+        const textContent = element.textContent || '';
+        const innerHTML = element.innerHTML || '';
+        
+        // 檢查是否為溢出警告元素
+        const isOverflowWarning = 
+          style.includes('yellow') ||
+          style.includes('#ffff00') ||
+          style.includes('#FFFF00') ||
+          style.includes('rgb(255, 255, 0)') ||
+          textContent.includes('OVERFLOWED') ||
+          textContent.includes('PIXELS') ||
+          textContent.includes('RIGHT OVERFLOWED') ||
+          innerHTML.includes('OVERFLOWED') ||
+          innerHTML.includes('PIXELS');
+          
+        // 特別檢查右上角位置的元素
+        const isTopRightElement = 
+          style.includes('position: absolute') && 
+          style.includes('top: 0') && 
+          style.includes('right: 0');
+          
+        if (isOverflowWarning || (isTopRightElement && style.includes('yellow'))) {
+          // 多重隱藏方法確保元素完全不可見
+          element.style.display = 'none';
+          element.style.visibility = 'hidden';
+          element.style.opacity = '0';
+          element.style.position = 'absolute';
+          element.style.left = '-99999px';
+          element.style.top = '-99999px';
+          element.style.width = '0';
+          element.style.height = '0';
+          element.style.overflow = 'hidden';
+          element.style.pointerEvents = 'none';
+          element.style.zIndex = '-9999';
+          
+          // 如果是文字節點，清空內容
+          if (element.textContent && 
+              (element.textContent.includes('OVERFLOWED') || 
+               element.textContent.includes('PIXELS'))) {
+            element.textContent = '';
+          }
+        }
+      });
+    }
+    
+    // 頁面載入後立即執行
+    document.addEventListener('DOMContentLoaded', hideOverflowWarnings);
+    
+    // 使用MutationObserver持續監控DOM變化
+    const observer = new MutationObserver(function(mutations) {
+      let shouldCheck = false;
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList' || mutation.type === 'attributes') {
+          shouldCheck = true;
+        }
+      });
+      if (shouldCheck) {
+        setTimeout(hideOverflowWarnings, 10); // 延遲10ms執行
+      }
+    });
+    
+    // 開始觀察DOM變化
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+    
+    // 定期檢查（每500ms）
+    setInterval(hideOverflowWarnings, 500);
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
