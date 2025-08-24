@@ -561,21 +561,27 @@
             });
         });
         
-        // 啟動應用按鈕
-         document.getElementById('launch-app').addEventListener('click', function(e) {
-             e.preventDefault();
-             
-             // 創建載入效果
-             const button = this;
-             const originalText = button.textContent;
-             button.textContent = '🚀 正在啟動...';
-             button.style.pointerEvents = 'none';
-             
-             // 模擬載入
-             setTimeout(() => {
-                 // 重新載入頁面到應用模式 - 使用現有的功能頁面
-                 window.location.href = 'working.html';
-             }, 2000);
+        // 確保 DOM 載入完成後綁定事件
+         document.addEventListener('DOMContentLoaded', function() {
+             // 啟動應用按鈕
+             const launchButton = document.getElementById('launch-app');
+             if (launchButton) {
+                 launchButton.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     
+                     // 創建載入效果
+                     const button = this;
+                     const originalText = button.textContent;
+                     button.textContent = '🚀 正在啟動...';
+                     button.style.pointerEvents = 'none';
+                     
+                     // 模擬載入
+                     setTimeout(() => {
+                         // 重新載入頁面到應用模式 - 使用現有的功能頁面
+                         window.location.href = 'working.html';
+                     }, 2000);
+                 });
+             }
          });
         
         // 鍵盤導航支援
