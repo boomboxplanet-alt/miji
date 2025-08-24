@@ -402,6 +402,20 @@
         
         <!-- 側邊欄 -->
         <div id="sidebar" class="sidebar">
+            <!-- 用戶資訊 -->
+            <div class="user-info" id="user-info" style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #4ECDC4, #44A08D); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;" id="user-avatar">U</div>
+                    <div>
+                        <div style="font-weight: 600; color: #f5f5f7;" id="user-display-name">用戶</div>
+                        <div style="font-size: 12px; color: #888;" id="user-username">@username</div>
+                    </div>
+                </div>
+                <div style="font-size: 12px; color: #888;">
+                    等級 <span id="user-level">1</span> • 經驗 <span id="user-experience">0</span>
+                </div>
+            </div>
+            
             <div class="sidebar-content">
                 <h3>📍 附近的訊息</h3>
                 <div id="messages-list">
@@ -414,7 +428,8 @@
                 <div style="margin-bottom: 20px;">
                     <button class="btn" onclick="centerOnUser()" style="width: 100%; margin-bottom: 10px;">📍 我的位置</button>
                     <button class="btn" onclick="showMessageForm()" style="width: 100%; margin-bottom: 10px;">✉️ 發送訊息</button>
-                    <button class="btn btn-secondary" onclick="showDemo()" style="width: 100%;">🎮 演示模式</button>
+                    <button class="btn btn-secondary" onclick="showDemo()" style="width: 100%; margin-bottom: 10px;">🎮 演示模式</button>
+                    <button class="btn" onclick="logout()" style="width: 100%; background: #ff6b6b; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px;">🚪 登出</button>
                 </div>
                 
                 <h3>ℹ️ 應用資訊</h3>
@@ -516,11 +531,34 @@
         let userLocation = null;
         let messages = [];
         let markers = [];
-        let authToken = null;
-        let currentUser = null;
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
         
         // API 配置
         const API_BASE_URL = 'http://localhost:5000';
+        
+        // 檢查認證狀態
+        function checkAuth() {
+            if (!authToken || !currentUser) {
+                showNotification('請先登入', 'error');
+                setTimeout(() => {
+                    window.location.href = 'auth.html';
+                }, 2000);
+                return false;
+            }
+            return true;
+        }
+        
+        // 登出功能
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('currentUser');
+            showNotification('已登出');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
+        }
         
         // API 請求函數
         async function apiRequest(endpoint, options = {}) {
@@ -554,17 +592,43 @@
         }
         
         // 初始化應用程式
-         function initApp() {
-             showLoading();
-             initMap();
-             getUserLocation();
-             
-             // 隱藏載入畫面
-             setTimeout(() => {
-                 hideLoading();
-                 showNotification('🎉 歡迎使用秘跡應用！');
-             }, 2000);
-         }
+          function initApp() {
+              // 檢查認證狀態
+              if (!checkAuth()) {
+                  return;
+              }
+              
+              showLoading();
+              updateUserInfo();
+              initMap();
+              getUserLocation();
+              
+              // 隱藏載入畫面
+              setTimeout(() => {
+                  hideLoading();
+                  showNotification(`🎉 歡迎回來，${currentUser.displayName}！`);
+              }, 2000);
+          }
+          
+          // 更新用戶資訊顯示
+          function updateUserInfo() {
+              if (currentUser) {
+                  document.getElementById('user-display-name').textContent = currentUser.displayName;
+                  document.getElementById('user-username').textContent = `@${currentUser.username}`;
+                  document.getElementById('user-level').textContent = currentUser.stats?.level || 1;
+                  document.getElementById('user-experience').textContent = currentUser.stats?.experience || 0;
+                  
+                  // 設置頭像
+                  const avatar = document.getElementById('user-avatar');
+                  if (currentUser.avatar) {
+                      avatar.style.backgroundImage = `url(${currentUser.avatar})`;
+                      avatar.style.backgroundSize = 'cover';
+                      avatar.textContent = '';
+                  } else {
+                      avatar.textContent = currentUser.displayName.charAt(0).toUpperCase();
+                  }
+              }
+          }
         
         // 初始化地圖
         function initMap() {
