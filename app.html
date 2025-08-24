@@ -7,6 +7,9 @@
     <link rel="icon" type="image/png" href="favicon.png"/>
     <link rel="manifest" href="manifest.json">
     
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
     <!-- Google Maps API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAQYyu2mXjzO-zKMYTClcWdBLZNMclkSuo&libraries=places"></script>
     
@@ -311,6 +314,21 @@
             to { transform: rotate(360deg); }
         }
         
+        /* 在線狀態指示器 */
+        .online-indicator {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #f44336;
+            transition: background-color 0.3s ease;
+        }
+        
         /* 響應式設計 */
         @media (max-width: 768px) {
             .sidebar {
@@ -394,6 +412,9 @@
         <div class="top-nav">
             <div class="logo">🔮 秘跡 Miji</div>
             <div class="nav-buttons">
+                <div class="online-indicator">
+                    <div id="online-status" class="status-dot" title="離線"></div>
+                </div>
                 <div class="nav-btn" onclick="toggleSidebar()">📋 訊息</div>
                 <div class="nav-btn" onclick="showProfile()">👤 用戶</div>
                 <a href="index.html" class="nav-btn">🏠 首頁</a>
@@ -533,9 +554,152 @@
         let markers = [];
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        let socket = null;
+        let isOnline = false;
         
         // API 配置
         const API_BASE_URL = 'http://localhost:5000';
+        
+        // Socket.IO 連接
+        function initSocket() {
+            if (!authToken) return;
+            
+            socket = io(API_BASE_URL, {
+                auth: {
+                    token: authToken
+                },
+                transports: ['websocket', 'polling']
+            });
+            
+            // 連接事件
+            socket.on('connect', () => {
+                console.log('✅ Socket connected:', socket.id);
+                isOnline = true;
+                updateOnlineStatus(true);
+            });
+            
+            socket.on('disconnect', (reason) => {
+                console.log('❌ Socket disconnected:', reason);
+                isOnline = false;
+                updateOnlineStatus(false);
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.error('Socket connection error:', error);
+                showNotification('連接失敗，使用離線模式', 'error');
+            });
+            
+            // 實時訊息事件
+            socket.on('message:new', (data) => {
+                console.log('New message received:', data);
+                handleNewMessage(data);
+            });
+            
+            socket.on('message:interaction', (data) => {
+                console.log('Message interaction:', data);
+                handleMessageInteraction(data);
+            });
+            
+            // 用戶位置更新
+            socket.on('user:location_updated', (data) => {
+                console.log('User location updated:', data);
+                handleUserLocationUpdate(data);
+            });
+            
+            // 用戶在線狀態
+            socket.on('user:presence_updated', (data) => {
+                console.log('User presence updated:', data);
+                handleUserPresenceUpdate(data);
+            });
+            
+            // 附近用戶
+            socket.on('users:nearby', (data) => {
+                console.log('Nearby users:', data);
+                handleNearbyUsers(data);
+            });
+            
+            // 錯誤處理
+            socket.on('error', (error) => {
+                console.error('Socket error:', error);
+                showNotification(error.message || '發生錯誤', 'error');
+            });
+        }
+        
+        // 更新在線狀態顯示
+        function updateOnlineStatus(online) {
+            const statusIndicator = document.getElementById('online-status');
+            if (statusIndicator) {
+                statusIndicator.style.backgroundColor = online ? '#4CAF50' : '#f44336';
+                statusIndicator.title = online ? '在線' : '離線';
+            }
+        }
+        
+        // 處理新訊息
+        function handleNewMessage(data) {
+            if (data.message) {
+                messages.unshift(data.message);
+                displayMessages();
+                loadNearbyMessages();
+                showNotification(`📩 ${data.author.displayName} 發送了新訊息`);
+            }
+        }
+        
+        // 處理訊息互動
+        function handleMessageInteraction(data) {
+            const messageIndex = messages.findIndex(msg => msg.id === data.messageId);
+            if (messageIndex !== -1) {
+                if (data.action === 'like') {
+                    messages[messageIndex].stats = data.stats;
+                    showNotification(`❤️ ${data.user.displayName} 喜歡了你的訊息`);
+                } else if (data.action === 'view') {
+                    messages[messageIndex].stats = data.stats;
+                }
+            }
+        }
+        
+        // 處理用戶位置更新
+        function handleUserLocationUpdate(data) {
+            // 可以在地圖上顯示附近用戶的位置更新
+            console.log(`${data.displayName} 更新了位置`);
+        }
+        
+        // 處理用戶在線狀態更新
+        function handleUserPresenceUpdate(data) {
+            console.log(`${data.displayName} 狀態: ${data.status}`);
+        }
+        
+        // 處理附近用戶
+        function handleNearbyUsers(data) {
+            console.log('附近用戶:', data.users);
+        }
+        
+        // 發送位置更新到服務器
+        function sendLocationUpdate(lat, lng) {
+            if (socket && isOnline) {
+                socket.emit('location:update', {
+                    latitude: lat,
+                    longitude: lng
+                });
+            }
+        }
+        
+        // 通知新訊息
+        function notifyNewMessage(messageId) {
+            if (socket && isOnline) {
+                socket.emit('message:new', {
+                    messageId: messageId
+                });
+            }
+        }
+        
+        // 獲取附近用戶
+        function getNearbyUsers() {
+            if (socket && isOnline) {
+                socket.emit('users:get_nearby', {
+                    radius: 2000
+                });
+            }
+        }
         
         // 檢查認證狀態
         function checkAuth() {
@@ -593,22 +757,28 @@
         
         // 初始化應用程式
           function initApp() {
-              // 檢查認證狀態
-              if (!checkAuth()) {
-                  return;
-              }
-              
-              showLoading();
-              updateUserInfo();
-              initMap();
-              getUserLocation();
-              
-              // 隱藏載入畫面
-              setTimeout(() => {
-                  hideLoading();
-                  showNotification(`🎉 歡迎回來，${currentUser.displayName}！`);
-              }, 2000);
-          }
+               // 檢查認證狀態
+               if (!checkAuth()) {
+                   return;
+               }
+               
+               showLoading();
+               updateUserInfo();
+               initSocket();
+               initMap();
+               getUserLocation();
+               
+               // 隱藏載入畫面
+               setTimeout(() => {
+                   hideLoading();
+                   showNotification(`🎉 歡迎回來，${currentUser.displayName}！`);
+                   
+                   // 獲取附近用戶
+                   setTimeout(() => {
+                       getNearbyUsers();
+                   }, 1000);
+               }, 2000);
+           }
           
           // 更新用戶資訊顯示
           function updateUserInfo() {
@@ -681,6 +851,9 @@
                         };
                         map.setCenter(userLocation);
                         
+                        // 發送位置更新到服務器
+                        sendLocationUpdate(userLocation.lat, userLocation.lng);
+                        
                         // 添加用戶位置標記
                         new google.maps.Marker({
                             position: userLocation,
@@ -705,6 +878,10 @@
                         showNotification('無法獲取位置信息，使用預設位置', 'error');
                         userLocation = { lat: 25.0330, lng: 121.5654 };
                         map.setCenter(userLocation);
+                        
+                        // 發送預設位置
+                        sendLocationUpdate(userLocation.lat, userLocation.lng);
+                        
                         loadNearbyMessages();
                     }
                 );
@@ -712,6 +889,10 @@
                 showNotification('瀏覽器不支援地理定位', 'error');
                 userLocation = { lat: 25.0330, lng: 121.5654 };
                 map.setCenter(userLocation);
+                
+                // 發送預設位置
+                sendLocationUpdate(userLocation.lat, userLocation.lng);
+                
                 loadNearbyMessages();
             }
         }
@@ -912,15 +1093,20 @@
                  });
                  
                  if (response.success) {
-                     // 重置表單
-                     document.getElementById('message-form').reset();
-                     closeModal('message-modal');
-                     
-                     // 重新載入附近訊息
-                     await loadNearbyMessages();
-                     
-                     showNotification('訊息發送成功！');
-                 }
+                      // 通知新訊息到實時系統
+                      if (response.data.message.id) {
+                          notifyNewMessage(response.data.message.id);
+                      }
+                      
+                      // 重置表單
+                      document.getElementById('message-form').reset();
+                      closeModal('message-modal');
+                      
+                      // 重新載入附近訊息
+                      await loadNearbyMessages();
+                      
+                      showNotification('訊息發送成功！');
+                  }
              } catch (error) {
                  console.error('發送訊息失敗:', error);
                  showNotification('發送訊息失敗，請重試', 'error');
