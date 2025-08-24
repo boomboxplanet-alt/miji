@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google 登入測試 - 秘跡</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #3367d6;
+        }
+        #google-signin-button {
+            margin: 20px 0;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Google 登入診斷工具</h1>
+        <p>此頁面用於診斷 Google OAuth 登入問題</p>
+        
+        <div id="status-container">
+            <!-- 狀態信息將在這裡顯示 -->
+        </div>
+        
+        <h3>測試步驟：</h3>
+        <button onclick="testGoogleAPI()">1. 測試 Google API 載入</button>
+        <button onclick="testClientID()">2. 測試 Client ID</button>
+        <button onclick="initializeGoogleSignIn()">3. 初始化 Google Sign-In</button>
+        <button onclick="testBackendConnection()">4. 測試後端連接</button>
+        
+        <div id="google-signin-button"></div>
+        
+        <h3>診斷日誌：</h3>
+        <div id="log" class="log"></div>
+        
+        <h3>配置信息：</h3>
+        <div class="info status">
+            <strong>Client ID:</strong> 489229401965-9imk2ahinf9uicbo8rn21kl0ibi92lie.apps.googleusercontent.com<br>
+            <strong>當前域名:</strong> <span id="current-domain"></span><br>
+            <strong>後端 API:</strong> http://localhost:5000<br>
+            <strong>需要配置的授權域名:</strong> boomboxplanet-alt.github.io
+        </div>
+        
+        <h3>解決方案：</h3>
+        <div class="warning status">
+            <strong>如果 Google 登入失敗，請檢查：</strong><br>
+            1. Google Cloud Console 中是否已添加 <code>boomboxplanet-alt.github.io</code> 到授權 JavaScript 來源<br>
+            2. 是否已添加 <code>https://boomboxplanet-alt.github.io</code> 到授權重定向 URI<br>
+            3. 後端服務器是否正在運行 (http://localhost:5000)<br>
+            4. 瀏覽器是否阻止了第三方 cookies
+        </div>
+    </div>
+    
+    <script>
+        const GOOGLE_CLIENT_ID = '489229401965-9imk2ahinf9uicbo8rn21kl0ibi92lie.apps.googleusercontent.com';
+        const API_BASE_URL = 'http://localhost:5000';
+        
+        // 日誌函數
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+            logDiv.textContent += logEntry;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(logEntry);
+        }
+        
+        // 添加狀態信息
+        function addStatus(message, type = 'info') {
+            const container = document.getElementById('status-container');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+            container.appendChild(statusDiv);
+        }
+        
+        // 測試 Google API 載入
+        function testGoogleAPI() {
+            log('測試 Google API 載入...');
+            
+            if (typeof google !== 'undefined') {
+                if (google.accounts && google.accounts.id) {
+                    addStatus('✅ Google Sign-In API 已成功載入', 'success');
+                    log('Google Sign-In API 可用');
+                } else {
+                    addStatus('⚠️ Google API 已載入但 Sign-In 功能不可用', 'warning');
+                    log('Google API 載入但缺少 accounts.id');
+                }
+            } else {
+                addStatus('❌ Google API 未載入', 'error');
+                log('Google API 未載入，請檢查網絡連接');
+            }
+        }
+        
+        // 測試 Client ID
+        function testClientID() {
+            log('測試 Client ID 配置...');
+            
+            if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.includes('.apps.googleusercontent.com')) {
+                addStatus('✅ Client ID 格式正確', 'success');
+                log(`Client ID: ${GOOGLE_CLIENT_ID}`);
+            } else {
+                addStatus('❌ Client ID 格式錯誤', 'error');
+                log('Client ID 格式不正確');
+            }
+        }
+        
+        // 初始化 Google Sign-In
+        function initializeGoogleSignIn() {
+            log('初始化 Google Sign-In...');
+            
+            if (typeof google === 'undefined' || !google.accounts) {
+                addStatus('❌ 無法初始化：Google API 未載入', 'error');
+                return;
+            }
+            
+            try {
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleCredentialResponse,
+                    auto_select: false,
+                    cancel_on_tap_outside: false
+                });
+                
+                // 渲染按鈕
+                const buttonContainer = document.getElementById('google-signin-button');
+                buttonContainer.innerHTML = ''; // 清空
+                
+                google.accounts.id.renderButton(
+                    buttonContainer,
+                    {
+                        theme: 'outline',
+                        size: 'large',
+                        width: '300',
+                        text: 'signin_with'
+                    }
+                );
+                
+                addStatus('✅ Google Sign-In 初始化成功', 'success');
+                log('Google Sign-In 按鈕已渲染');
+                
+            } catch (error) {
+                addStatus(`❌ 初始化失敗: ${error.message}`, 'error');
+                log(`初始化錯誤: ${error.message}`);
+            }
+        }
+        
+        // 處理 Google 登入回調
+        function handleCredentialResponse(response) {
+            log('收到 Google 登入回調');
+            
+            if (response.credential) {
+                addStatus('✅ 成功獲取 Google credential', 'success');
+                log(`Credential 長度: ${response.credential.length}`);
+                
+                // 測試發送到後端
+                testGoogleLogin(response.credential);
+            } else {
+                addStatus('❌ 未獲取到 credential', 'error');
+                log('Google 登入回調中沒有 credential');
+            }
+        }
+        
+        // 測試 Google 登入
+        async function testGoogleLogin(credential) {
+            log('測試發送 credential 到後端...');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ credential })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    addStatus('✅ 後端 Google 登入成功', 'success');
+                    log(`登入成功，用戶: ${data.data.user.displayName}`);
+                } else {
+                    addStatus(`❌ 後端登入失敗: ${data.message}`, 'error');
+                    log(`後端錯誤: ${data.message}`);
+                }
+            } catch (error) {
+                addStatus(`❌ 網絡錯誤: ${error.message}`, 'error');
+                log(`網絡錯誤: ${error.message}`);
+            }
+        }
+        
+        // 測試後端連接
+        async function testBackendConnection() {
+            log('測試後端連接...');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addStatus('✅ 後端服務器連接正常', 'success');
+                    log(`後端狀態: ${data.status}`);
+                } else {
+                    addStatus('❌ 後端服務器響應異常', 'error');
+                    log(`後端錯誤: ${response.status}`);
+                }
+            } catch (error) {
+                addStatus(`❌ 無法連接後端服務器: ${error.message}`, 'error');
+                log(`連接錯誤: ${error.message}`);
+            }
+        }
+        
+        // 頁面載入時的初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 顯示當前域名
+            document.getElementById('current-domain').textContent = window.location.hostname;
+            
+            log('頁面載入完成，開始診斷...');
+            
+            // 等待 Google API 載入
+            setTimeout(() => {
+                testGoogleAPI();
+                testClientID();
+            }, 1000);
+        });
+        
+        // 監聽 Google API 載入
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (typeof google !== 'undefined') {
+                    log('Google API 已載入');
+                } else {
+                    log('Google API 載入失敗');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
