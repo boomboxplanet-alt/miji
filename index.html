@@ -330,9 +330,62 @@
         }
         
         .notification.error {
-            background: rgba(244, 67, 54, 0.9);
-        }
-    </style>
+             background: rgba(244, 67, 54, 0.9);
+         }
+         
+         /* 隱藏 Google Maps 相關信息 */
+         .gm-style-cc {
+             display: none !important;
+         }
+         
+         .gmnoprint {
+             display: none !important;
+         }
+         
+         .gm-bundled-control {
+             display: none !important;
+         }
+         
+         .gm-fullscreen-control {
+             display: none !important;
+         }
+         
+         .gm-svpc {
+             display: none !important;
+         }
+         
+         .gm-style .gm-style-mtc {
+             display: none !important;
+         }
+         
+         .gm-style .controls {
+             display: none !important;
+         }
+         
+         /* 隱藏 Google 版權和條款 */
+         a[href^="https://maps.google.com/maps"] {
+             display: none !important;
+         }
+         
+         a[href^="https://www.google.com/intl"] {
+             display: none !important;
+         }
+         
+         /* 隱藏報告問題連結 */
+         a[href^="https://www.google.com/maps"] {
+             display: none !important;
+         }
+         
+         /* 隱藏鍵盤快捷鍵 */
+         button[data-value="keyboard shortcuts"] {
+             display: none !important;
+         }
+         
+         /* 隱藏條款連結 */
+         a[href*="terms"] {
+             display: none !important;
+         }
+     </style>
 </head>
 <body>
     <div class="app-container">
