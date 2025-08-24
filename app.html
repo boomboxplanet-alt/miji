@@ -516,20 +516,55 @@
         let userLocation = null;
         let messages = [];
         let markers = [];
+        let authToken = null;
+        let currentUser = null;
+        
+        // API 配置
+        const API_BASE_URL = 'http://localhost:5000';
+        
+        // API 請求函數
+        async function apiRequest(endpoint, options = {}) {
+            const url = `${API_BASE_URL}${endpoint}`;
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
+                ...options
+            };
+            
+            if (config.body && typeof config.body === 'object') {
+                config.body = JSON.stringify(config.body);
+            }
+            
+            try {
+                const response = await fetch(url, config);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('API request failed:', error);
+                showNotification(`API 錯誤: ${error.message}`, 'error');
+                throw error;
+            }
+        }
         
         // 初始化應用程式
-        function initApp() {
-            showLoading();
-            initMap();
-            getUserLocation();
-            loadDemoMessages();
-            
-            // 隱藏載入畫面
-            setTimeout(() => {
-                hideLoading();
-                showNotification('🎉 歡迎使用秘跡應用！');
-            }, 2000);
-        }
+         function initApp() {
+             showLoading();
+             initMap();
+             getUserLocation();
+             
+             // 隱藏載入畫面
+             setTimeout(() => {
+                 hideLoading();
+                 showNotification('🎉 歡迎使用秘跡應用！');
+             }, 2000);
+         }
         
         // 初始化地圖
         function initMap() {
@@ -617,73 +652,40 @@
             }
         }
         
-        // 載入演示訊息
-        function loadDemoMessages() {
-            messages = [
-                {
-                    id: 1,
-                    content: '歡迎來到秘跡！這是你的第一條訊息。',
-                    type: 'tip',
-                    lat: 25.0330,
-                    lng: 121.5654,
-                    author: '系統',
-                    timestamp: Date.now() - 3600000,
-                    duration: 86400000
-                },
-                {
-                    id: 2,
-                    content: '這裡有一個隱藏的寶藏！快來尋找吧。',
-                    type: 'secret',
-                    lat: 25.0340,
-                    lng: 121.5664,
-                    author: '神秘探險家',
-                    timestamp: Date.now() - 7200000,
-                    duration: 604800000
-                },
-                {
-                    id: 3,
-                    content: '有人知道這附近哪裡有好吃的嗎？',
-                    type: 'question',
-                    lat: 25.0320,
-                    lng: 121.5644,
-                    author: '美食愛好者',
-                    timestamp: Date.now() - 1800000,
-                    duration: 86400000
-                }
-            ];
-            
-            displayMessages();
-        }
+
         
         // 顯示訊息標記
-        function displayMessages() {
-            // 清除現有標記
-            markers.forEach(marker => marker.setMap(null));
-            markers = [];
-            
-            messages.forEach(message => {
-                const marker = new google.maps.Marker({
-                    position: { lat: message.lat, lng: message.lng },
-                    map: map,
-                    icon: {
-                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="16" cy="16" r="12" fill="#FF6B6B" opacity="0.8"/>
-                                <text x="16" y="20" text-anchor="middle" fill="white" font-size="16">${getMessageIcon(message.type)}</text>
-                            </svg>
-                        `),
-                        scaledSize: new google.maps.Size(32, 32)
-                    },
-                    title: message.content.substring(0, 50) + '...'
-                });
-                
-                marker.addListener('click', () => {
-                    showMessageDetail(message);
-                });
-                
-                markers.push(marker);
-            });
-        }
+         function displayMessages() {
+             // 清除現有標記
+             markers.forEach(marker => marker.setMap(null));
+             markers = [];
+             
+             messages.forEach(message => {
+                 const lat = message.location ? message.location.coordinates[1] : message.lat;
+                 const lng = message.location ? message.location.coordinates[0] : message.lng;
+                 
+                 const marker = new google.maps.Marker({
+                     position: { lat: lat, lng: lng },
+                     map: map,
+                     icon: {
+                         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                 <circle cx="16" cy="16" r="12" fill="#FF6B6B" opacity="0.8"/>
+                                 <text x="16" y="20" text-anchor="middle" fill="white" font-size="16">${getMessageIcon(message.type)}</text>
+                             </svg>
+                         `),
+                         scaledSize: new google.maps.Size(32, 32)
+                     },
+                     title: message.content.substring(0, 50) + '...'
+                 });
+                 
+                 marker.addListener('click', () => {
+                     showMessageDetail(message.id || message);
+                 });
+                 
+                 markers.push(marker);
+             });
+         }
         
         // 獲取訊息圖標
         function getMessageIcon(type) {
@@ -697,30 +699,38 @@
         }
         
         // 載入附近訊息
-        function loadNearbyMessages() {
-            const messagesList = document.getElementById('messages-list');
-            const nearbyMessages = messages.filter(msg => {
-                if (!userLocation) return false;
-                const distance = calculateDistance(
-                    userLocation.lat, userLocation.lng,
-                    msg.lat, msg.lng
-                );
-                return distance < 2000; // 2公里內
-            });
-            
-            if (nearbyMessages.length === 0) {
-                messagesList.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">附近沒有發現訊息</div>';
-                return;
-            }
-            
-            messagesList.innerHTML = nearbyMessages.map(msg => `
-                <div class="message-item" onclick="showMessageDetail(${JSON.stringify(msg).replace(/"/g, '&quot;')})">
-                    <h4>${getMessageIcon(msg.type)} ${msg.content.substring(0, 30)}...</h4>
-                    <p>作者: ${msg.author}</p>
-                    <div class="meta">${formatTime(msg.timestamp)}</div>
-                </div>
-            `).join('');
-        }
+         async function loadNearbyMessages() {
+             const messagesList = document.getElementById('messages-list');
+             
+             if (!userLocation) {
+                 messagesList.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">正在獲取位置...</div>';
+                 return;
+             }
+             
+             try {
+                 messagesList.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">正在載入附近的訊息...</div>';
+                 
+                 const response = await apiRequest(`/api/messages/nearby?latitude=${userLocation.lat}&longitude=${userLocation.lng}&radius=2000`);
+                 
+                 if (response.success && response.data.messages.length > 0) {
+                     messages = response.data.messages;
+                     displayMessages();
+                     
+                     messagesList.innerHTML = messages.map(msg => `
+                         <div class="message-item" onclick="showMessageDetail('${msg.id}')">
+                             <h4>${getMessageIcon(msg.type)} ${msg.content.substring(0, 30)}...</h4>
+                             <p>作者: ${msg.authorName}</p>
+                             <div class="meta">${formatTime(new Date(msg.createdAt).getTime())}</div>
+                         </div>
+                     `).join('');
+                 } else {
+                     messagesList.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">附近沒有發現訊息</div>';
+                 }
+             } catch (error) {
+                 console.error('載入訊息失敗:', error);
+                 messagesList.innerHTML = '<div style="text-align: center; color: #f44336; padding: 20px;">載入訊息失敗，請重試</div>';
+             }
+         }
         
         // 計算距離
         function calculateDistance(lat1, lng1, lat2, lng2) {
@@ -753,12 +763,42 @@
         }
         
         // 顯示訊息詳情
-        function showMessageDetail(message) {
-            const timeLeft = message.timestamp + message.duration - Date.now();
-            const timeLeftStr = timeLeft > 0 ? formatTime(Date.now() - timeLeft) : '已過期';
-            
-            alert(`${getMessageIcon(message.type)} ${message.content}\n\n作者: ${message.author}\n時間: ${formatTime(message.timestamp)}\n剩餘時間: ${timeLeftStr}`);
-        }
+         function showMessageDetail(messageId) {
+             const message = messages.find(msg => msg.id === messageId) || messageId;
+             
+             if (typeof message === 'string') {
+                 // 如果只有 ID，從 messages 陣列中找到對應訊息
+                 const foundMessage = messages.find(msg => msg.id === message);
+                 if (!foundMessage) {
+                     showNotification('找不到訊息', 'error');
+                     return;
+                 }
+                 showMessageDetail(foundMessage);
+                 return;
+             }
+             
+             const createdTime = new Date(message.createdAt || message.timestamp);
+             const expiresTime = new Date(message.expiresAt || (message.timestamp + message.duration));
+             const timeLeft = expiresTime.getTime() - Date.now();
+             const timeLeftStr = timeLeft > 0 ? formatTimeRemaining(timeLeft) : '已過期';
+             
+             const authorName = message.authorName || message.author || '未知';
+             
+             alert(`${getMessageIcon(message.type)} ${message.content}\n\n作者: ${authorName}\n發布時間: ${formatTime(createdTime.getTime())}\n剩餘時間: ${timeLeftStr}\n\n👁️ 觀看: ${message.stats?.views || 0}\n❤️ 喜歡: ${message.stats?.likes || 0}\n💬 回覆: ${message.stats?.replies || 0}`);
+         }
+         
+         // 格式化剩餘時間
+         function formatTimeRemaining(milliseconds) {
+             const seconds = Math.floor(milliseconds / 1000);
+             const minutes = Math.floor(seconds / 60);
+             const hours = Math.floor(minutes / 60);
+             const days = Math.floor(hours / 24);
+             
+             if (days > 0) return `${days} 天`;
+             if (hours > 0) return `${hours} 小時`;
+             if (minutes > 0) return `${minutes} 分鐘`;
+             return `${seconds} 秒`;
+         }
         
         // 切換側邊欄
         function toggleSidebar() {
@@ -778,40 +818,50 @@
         }
         
         // 處理訊息表單提交
-        document.getElementById('message-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const content = document.getElementById('message-content').value;
-            const type = document.getElementById('message-type').value;
-            const duration = parseInt(document.getElementById('message-duration').value);
-            
-            const location = window.selectedLocation || userLocation;
-            if (!location) {
-                showNotification('無法確定位置', 'error');
-                return;
-            }
-            
-            const newMessage = {
-                id: messages.length + 1,
-                content: content,
-                type: type,
-                lat: location.lat,
-                lng: location.lng,
-                author: '我',
-                timestamp: Date.now(),
-                duration: duration * 1000
-            };
-            
-            messages.push(newMessage);
-            displayMessages();
-            loadNearbyMessages();
-            
-            // 重置表單
-            document.getElementById('message-form').reset();
-            closeModal('message-modal');
-            
-            showNotification('訊息發送成功！');
-        });
+         document.getElementById('message-form').addEventListener('submit', async function(e) {
+             e.preventDefault();
+             
+             const content = document.getElementById('message-content').value;
+             const type = document.getElementById('message-type').value;
+             const duration = parseInt(document.getElementById('message-duration').value) * 1000;
+             
+             const location = window.selectedLocation || userLocation;
+             if (!location) {
+                 showNotification('無法確定位置', 'error');
+                 return;
+             }
+             
+             try {
+                 showNotification('正在發送訊息...');
+                 
+                 const messageData = {
+                     content: content,
+                     type: type,
+                     latitude: location.lat,
+                     longitude: location.lng,
+                     duration: duration
+                 };
+                 
+                 const response = await apiRequest('/api/messages', {
+                     method: 'POST',
+                     body: messageData
+                 });
+                 
+                 if (response.success) {
+                     // 重置表單
+                     document.getElementById('message-form').reset();
+                     closeModal('message-modal');
+                     
+                     // 重新載入附近訊息
+                     await loadNearbyMessages();
+                     
+                     showNotification('訊息發送成功！');
+                 }
+             } catch (error) {
+                 console.error('發送訊息失敗:', error);
+                 showNotification('發送訊息失敗，請重試', 'error');
+             }
+         });
         
         // 居中到用戶位置
         function centerOnUser() {
