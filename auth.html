@@ -496,9 +496,46 @@
             }
         });
         
-        // Google 登入（模擬）
-        function loginWithGoogle() {
-            showNotification('Google 登入功能開發中...', 'error');
+        // Google 登入
+        async function loginWithGoogle() {
+            try {
+                showLoading();
+                
+                // 模擬 Google 登入流程
+                const mockCredential = 'mock_google_credential_' + Date.now();
+                
+                const response = await apiRequest('/api/auth/google', {
+                    method: 'POST',
+                    body: {
+                        credential: mockCredential
+                    }
+                });
+                
+                if (response.success) {
+                    // 保存 token
+                    localStorage.setItem('authToken', response.data.token);
+                    localStorage.setItem('refreshToken', response.data.refreshToken);
+                    localStorage.setItem('currentUser', JSON.stringify(response.data.user));
+                    
+                    showNotification('Google 登入成功！正在跳轉...');
+                    
+                    // 跳轉到應用
+                    setTimeout(() => {
+                        window.location.href = 'app.html';
+                    }, 1500);
+                }
+            } catch (error) {
+                showNotification('Google 登入失敗: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 初始化 Google Sign-In（如果有真實的 Google Client ID）
+        function initGoogleSignIn() {
+            // 這裡可以初始化真正的 Google Sign-In
+            // 需要在 Google Cloud Console 設置 OAuth 2.0 客戶端 ID
+            console.log('Google Sign-In initialized (mock mode)');
         }
         
         // 檢查是否已登入
@@ -506,6 +543,11 @@
             // 如果已登入，直接跳轉到應用
             window.location.href = 'app.html';
         }
+        
+        // 初始化頁面
+        document.addEventListener('DOMContentLoaded', () => {
+            initGoogleSignIn();
+        });
     </script>
 </body>
 </html>
