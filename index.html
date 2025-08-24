@@ -367,12 +367,21 @@
                     </div>
                 </div>
                 
-                <h3>📍 附近的訊息</h3>
-                <div id="messages-list">
-                    <div style="text-align: center; color: #888; padding: 20px;">
-                        移動地圖來發現附近的秘密訊息
-                    </div>
-                </div>
+                <h3>📡 可視範圍內的訊息 <span style="font-size: 12px; color: #888;">(${visibilityRadius}m)</span></h3>
+                 <div style="margin-bottom: 15px;">
+                     <label style="font-size: 12px; color: #ccc;">調整可視範圍:</label>
+                     <select onchange="updateVisibilityRadius(parseInt(this.value))" style="width: 100%; padding: 5px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; color: white; font-size: 12px;">
+                         <option value="200">200m - 近距離</option>
+                         <option value="500" selected>500m - 標準範圍</option>
+                         <option value="1000">1000m - 遠距離</option>
+                         <option value="2000">2000m - 超遠距離</option>
+                     </select>
+                 </div>
+                 <div id="messages-list">
+                     <div style="text-align: center; color: #888; padding: 20px;">
+                         📡 正在掃描可視範圍內的訊息...
+                     </div>
+                 </div>
                 
                 <h3>🎯 我的任務</h3>
                 <div id="tasks-list">
@@ -513,83 +522,112 @@
             }, 2000);
         }
         
-        // 初始化地圖
-        function initMap() {
-            map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 15,
-                center: { lat: 25.0330, lng: 121.5654 }, // 台北101
-                styles: [
-                    {
-                        "featureType": "all",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#242f3e" }]
-                    },
-                    {
-                        "featureType": "all",
-                        "elementType": "labels.text.stroke",
-                        "stylers": [{ "lightness": -80 }]
-                    },
-                    {
-                        "featureType": "administrative",
-                        "elementType": "labels.text.fill",
-                        "stylers": [{ "color": "#746855" }]
-                    },
-                    {
-                        "featureType": "water",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#17263c" }]
-                    }
-                ],
-                disableDefaultUI: true,
-                zoomControl: true,
-                mapTypeControl: false,
-                streetViewControl: false,
-                fullscreenControl: false
-            });
-            
-            // 地圖點擊事件
-            map.addListener('click', function(event) {
-                if (currentUser) {
-                    showMessageFormAtLocation(event.latLng);
-                }
-            });
-        }
+        // 全域變數 - 可視範圍
+         let visibilityCircle = null;
+         let visibilityRadius = 500; // 500米可視範圍
+         let autoMessageInterval = null;
+         
+         // 初始化地圖
+         function initMap() {
+             map = new google.maps.Map(document.getElementById('map'), {
+                 zoom: 16, // 提高縮放級別以更好顯示範圍
+                 center: { lat: 25.0330, lng: 121.5654 }, // 台北101
+                 styles: [
+                     {
+                         "featureType": "all",
+                         "elementType": "geometry",
+                         "stylers": [{ "color": "#242f3e" }]
+                     },
+                     {
+                         "featureType": "all",
+                         "elementType": "labels.text.stroke",
+                         "stylers": [{ "lightness": -80 }]
+                     },
+                     {
+                         "featureType": "administrative",
+                         "elementType": "labels.text.fill",
+                         "stylers": [{ "color": "#746855" }]
+                     },
+                     {
+                         "featureType": "water",
+                         "elementType": "geometry",
+                         "stylers": [{ "color": "#17263c" }]
+                     }
+                 ],
+                 disableDefaultUI: true,
+                 zoomControl: true,
+                 mapTypeControl: false,
+                 streetViewControl: false,
+                 fullscreenControl: false
+             });
+             
+             // 地圖點擊事件
+             map.addListener('click', function(event) {
+                 if (currentUser) {
+                     showMessageFormAtLocation(event.latLng);
+                 }
+             });
+         }
         
         // 獲取用戶位置
-        function getUserLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        userLocation = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        };
-                        map.setCenter(userLocation);
-                        
-                        // 添加用戶位置標記
-                        new google.maps.Marker({
-                            position: userLocation,
-                            map: map,
-                            icon: {
-                                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="12" cy="12" r="8" fill="#4ECDC4"/>
-                                        <circle cx="12" cy="12" r="4" fill="white"/>
-                                    </svg>
-                                `),
-                                scaledSize: new google.maps.Size(24, 24)
-                            },
-                            title: '我的位置'
-                        });
-                        
-                        loadNearbyMessages();
-                    },
-                    function() {
-                        showNotification('無法獲取位置信息', 'error');
-                    }
-                );
-            }
-        }
+         function getUserLocation() {
+             if (navigator.geolocation) {
+                 navigator.geolocation.getCurrentPosition(
+                     function(position) {
+                         userLocation = {
+                             lat: position.coords.latitude,
+                             lng: position.coords.longitude
+                         };
+                         
+                         // 以用戶為中心設置地圖
+                         map.setCenter(userLocation);
+                         
+                         // 添加用戶位置標記
+                         new google.maps.Marker({
+                             position: userLocation,
+                             map: map,
+                             icon: {
+                                 url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                                     <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                         <circle cx="16" cy="16" r="12" fill="#4ECDC4" stroke="white" stroke-width="2"/>
+                                         <circle cx="16" cy="16" r="6" fill="white"/>
+                                         <circle cx="16" cy="16" r="3" fill="#4ECDC4"/>
+                                     </svg>
+                                 `),
+                                 scaledSize: new google.maps.Size(32, 32)
+                             },
+                             title: '我的位置',
+                             zIndex: 1000
+                         });
+                         
+                         // 創建可視範圍圓圈
+                         createVisibilityCircle();
+                         
+                         // 載入附近訊息
+                         loadNearbyMessages();
+                         
+                         // 開始自動生成機器人訊息
+                         startAutoMessageGeneration();
+                     },
+                     function() {
+                         showNotification('無法獲取位置信息', 'error');
+                         // 使用預設位置（台北101）
+                         userLocation = { lat: 25.0330, lng: 121.5654 };
+                         map.setCenter(userLocation);
+                         createVisibilityCircle();
+                         loadNearbyMessages();
+                         startAutoMessageGeneration();
+                     }
+                 );
+             } else {
+                 // 瀏覽器不支援地理定位，使用預設位置
+                 userLocation = { lat: 25.0330, lng: 121.5654 };
+                 map.setCenter(userLocation);
+                 createVisibilityCircle();
+                 loadNearbyMessages();
+                 startAutoMessageGeneration();
+             }
+         }
         
         // 載入訊息
         function loadMessages() {
@@ -661,31 +699,142 @@
             return icons[type] || '📝';
         }
         
-        // 載入附近訊息
-        function loadNearbyMessages() {
-            const messagesList = document.getElementById('messages-list');
-            const nearbyMessages = messages.filter(msg => {
-                if (!userLocation) return false;
-                const distance = calculateDistance(
-                    userLocation.lat, userLocation.lng,
-                    msg.lat, msg.lng
-                );
-                return distance < 1000; // 1公里內
-            });
-            
-            if (nearbyMessages.length === 0) {
-                messagesList.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">附近沒有發現訊息</div>';
-                return;
-            }
-            
-            messagesList.innerHTML = nearbyMessages.map(msg => `
-                <div class="message-item" onclick="showMessageDetail(${JSON.stringify(msg).replace(/"/g, '&quot;')})">
-                    <h4>${getMessageIcon(msg.type)} ${msg.content.substring(0, 30)}...</h4>
-                    <p>作者: ${msg.author}</p>
-                    <div class="meta">${formatTime(msg.timestamp)}</div>
-                </div>
-            `).join('');
-        }
+        // 創建可視範圍圓圈
+         function createVisibilityCircle() {
+             if (visibilityCircle) {
+                 visibilityCircle.setMap(null);
+             }
+             
+             visibilityCircle = new google.maps.Circle({
+                 strokeColor: '#4ECDC4',
+                 strokeOpacity: 0.8,
+                 strokeWeight: 2,
+                 fillColor: '#4ECDC4',
+                 fillOpacity: 0.1,
+                 map: map,
+                 center: userLocation,
+                 radius: visibilityRadius,
+                 clickable: false
+             });
+             
+             // 添加範圍標籤
+             const infoWindow = new google.maps.InfoWindow({
+                 content: `<div style="color: #333; font-weight: bold;">📡 可視範圍: ${visibilityRadius}m</div>`,
+                 position: {
+                     lat: userLocation.lat + 0.003,
+                     lng: userLocation.lng
+                 },
+                 disableAutoPan: true
+             });
+             infoWindow.open(map);
+             
+             // 3秒後自動關閉標籤
+             setTimeout(() => {
+                 infoWindow.close();
+             }, 3000);
+         }
+         
+         // 開始自動生成機器人訊息
+         function startAutoMessageGeneration() {
+             // 清除現有的定時器
+             if (autoMessageInterval) {
+                 clearInterval(autoMessageInterval);
+             }
+             
+             // 每30秒生成一條機器人訊息
+             autoMessageInterval = setInterval(() => {
+                 generateBotMessage();
+             }, 30000);
+             
+             // 立即生成第一條訊息
+             setTimeout(() => {
+                 generateBotMessage();
+             }, 5000);
+         }
+         
+         // 生成機器人訊息
+         function generateBotMessage() {
+             if (!userLocation) return;
+             
+             const botMessages = [
+                 { content: '🤖 歡迎來到這個區域！這裡有很多有趣的地方等你發現。', type: 'tip' },
+                 { content: '🌟 附近有一家很棒的咖啡店，值得一試！', type: 'tip' },
+                 { content: '🎯 完成每日簽到任務可以獲得額外獎勵哦！', type: 'question' },
+                 { content: '🔍 試試看在不同時間來這裡，會有不同的發現。', type: 'secret' },
+                 { content: '💡 提示：多與其他用戶互動可以解鎖更多功能。', type: 'tip' },
+                 { content: '🎪 這個位置經常有特殊活動，記得關注！', type: 'text' },
+                 { content: '🗺️ 探索周圍500米範圍，你會發現更多秘密。', type: 'secret' },
+                 { content: '⭐ 你知道嗎？在這裡發送訊息會獲得雙倍經驗值！', type: 'tip' }
+             ];
+             
+             // 隨機選擇一條訊息
+             const randomMessage = botMessages[Math.floor(Math.random() * botMessages.length)];
+             
+             // 在可視範圍內隨機生成位置
+             const angle = Math.random() * 2 * Math.PI;
+             const distance = Math.random() * visibilityRadius * 0.8; // 80%範圍內
+             
+             // 計算新位置（簡化的地理計算）
+             const lat = userLocation.lat + (distance * Math.cos(angle)) / 111320;
+             const lng = userLocation.lng + (distance * Math.sin(angle)) / (111320 * Math.cos(userLocation.lat * Math.PI / 180));
+             
+             const botMessage = {
+                 id: messages.length + 1,
+                 content: randomMessage.content,
+                 type: randomMessage.type,
+                 lat: lat,
+                 lng: lng,
+                 author: '🤖 智能助手',
+                 timestamp: Date.now(),
+                 duration: 3600000, // 1小時後自動銷毀
+                 isBot: true
+             };
+             
+             messages.push(botMessage);
+             displayMessages();
+             loadNearbyMessages();
+             
+             // 顯示通知
+             showNotification(`🤖 智能助手在附近留下了新訊息！`);
+         }
+         
+         // 載入附近訊息
+         function loadNearbyMessages() {
+             const messagesList = document.getElementById('messages-list');
+             const nearbyMessages = messages.filter(msg => {
+                 if (!userLocation) return false;
+                 const distance = calculateDistance(
+                     userLocation.lat, userLocation.lng,
+                     msg.lat, msg.lng
+                 );
+                 return distance <= visibilityRadius; // 在可視範圍內
+             });
+             
+             if (nearbyMessages.length === 0) {
+                 messagesList.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">📡 可視範圍內暫無訊息<br><small>智能助手會定期在附近生成新訊息</small></div>';
+                 return;
+             }
+             
+             // 按距離排序
+             nearbyMessages.sort((a, b) => {
+                 const distA = calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng);
+                 const distB = calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
+                 return distA - distB;
+             });
+             
+             messagesList.innerHTML = nearbyMessages.map(msg => {
+                 const distance = Math.round(calculateDistance(userLocation.lat, userLocation.lng, msg.lat, msg.lng));
+                 const botBadge = msg.isBot ? '<span style="background: #4ECDC4; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 5px;">BOT</span>' : '';
+                 
+                 return `
+                     <div class="message-item" onclick="showMessageDetail(${JSON.stringify(msg).replace(/"/g, '&quot;')})">
+                         <h4>${getMessageIcon(msg.type)} ${msg.content.substring(0, 25)}...${botBadge}</h4>
+                         <p>作者: ${msg.author} • 距離: ${distance}m</p>
+                         <div class="meta">${formatTime(msg.timestamp)}</div>
+                     </div>
+                 `;
+             }).join('');
+         }
         
         // 計算距離
         function calculateDistance(lat1, lng1, lat2, lng2) {
@@ -879,14 +1028,32 @@
         }
         
         // 居中到用戶位置
-        function centerOnUser() {
-            if (userLocation) {
-                map.setCenter(userLocation);
-                map.setZoom(16);
-            } else {
-                getUserLocation();
-            }
-        }
+         function centerOnUser() {
+             if (userLocation) {
+                 map.setCenter(userLocation);
+                 map.setZoom(16);
+                 
+                 // 更新可視範圍圓圈
+                 if (visibilityCircle) {
+                     visibilityCircle.setCenter(userLocation);
+                 }
+                 
+                 // 重新載入附近訊息
+                 loadNearbyMessages();
+             } else {
+                 getUserLocation();
+             }
+         }
+         
+         // 更新可視範圍
+         function updateVisibilityRadius(newRadius) {
+             visibilityRadius = newRadius;
+             if (visibilityCircle) {
+                 visibilityCircle.setRadius(visibilityRadius);
+             }
+             loadNearbyMessages();
+             showNotification(`📡 可視範圍已調整為 ${visibilityRadius}m`);
+         }
         
         // 顯示 AI 助手
         function showAIAssistant() {
